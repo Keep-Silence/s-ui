@@ -25,6 +25,9 @@ RUN CRONET_ARCH="$TARGETARCH" && \
     wget -q -O ./libcronet.so "$CRONET_URL" && \
     chmod 755 ./libcronet.so
 
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 COPY frontend_dist/ /app/web/html/
 
