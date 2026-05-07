@@ -26,6 +26,7 @@ type ApiService struct {
 	service.PanelService
 	service.StatsService
 	service.ServerService
+	service.NodeService
 }
 
 func (a *ApiService) LoadData(c *gin.Context) {
@@ -86,6 +87,10 @@ func (a *ApiService) getData(c *gin.Context) (interface{}, error) {
 		if err != nil {
 			return "", err
 		}
+		nodes, err := a.NodeService.GetAll()
+		if err != nil {
+			return "", err
+		}
 		subURI, err := a.SettingService.GetFinalSubURI(getHostname(c))
 		if err != nil {
 			return "", err
@@ -101,6 +106,7 @@ func (a *ApiService) getData(c *gin.Context) (interface{}, error) {
 		data["outbounds"] = outbounds
 		data["endpoints"] = endpoints
 		data["services"] = services
+		data["nodes"] = nodes
 		data["subURI"] = subURI
 		data["enableTraffic"] = trafficAge > 0
 		data["onlines"] = onlines
@@ -165,6 +171,12 @@ func (a *ApiService) LoadPartialData(c *gin.Context, objs []string) error {
 				return err
 			}
 			data[obj] = settings
+		case "nodes":
+			nodes, err := a.NodeService.Get(id)
+			if err != nil {
+				return err
+			}
+			data[obj] = nodes
 		}
 	}
 

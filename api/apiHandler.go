@@ -13,11 +13,12 @@ type APIHandler struct {
 	apiv2 *APIv2Handler
 }
 
-func NewAPIHandler(g *gin.RouterGroup, a2 *APIv2Handler) {
+func NewAPIHandler(g *gin.RouterGroup, a2 *APIv2Handler) *APIHandler {
 	a := &APIHandler{
 		apiv2: a2,
 	}
 	a.initRouter(g)
+	return a
 }
 
 func (a *APIHandler) initRouter(g *gin.RouterGroup) {

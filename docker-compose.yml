@@ -1,7 +1,7 @@
 ---
 services:
   s-ui:
-    image: alireza7/s-ui
+    image: s-ui
     container_name: s-ui
     hostname: "s-ui"
     volumes:
@@ -12,11 +12,18 @@ services:
     ports:
       - "2095:2095"
       - "2096:2096"
-    networks:
-      - s-ui
     entrypoint: "./entrypoint.sh"
 
-networks:
-  s-ui:
-    driver: bridge
-  
+  s-ui-node:
+    image: s-ui
+    container_name: s-ui-node
+    hostname: "s-ui-node"
+    tty: true
+    restart: unless-stopped
+    network_mode: "host"
+    environment:
+      - "SUI_MODE=node"
+      - "SUI_PANEL_URL=http://127.0.0.1:2095/app"
+      - "SUI_NODE_TOKEN=localnode"
+    entrypoint: "./entrypoint.sh"
+

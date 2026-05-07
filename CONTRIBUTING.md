@@ -93,16 +93,38 @@ The backend is built with these tags for full functionality:
 
 Use the same tags when building locally if you need feature parity with releases.
 
+### Panel / Node Architecture
+
+S-UI supports a distributed architecture with two operation modes:
+
+- **Panel Mode** (default): Runs the full web panel, database, subscription server, cron jobs, and manages nodes remotely. This is the control plane.
+- **Node Mode**: Runs as a lightweight client that connects to a Panel instance via WebSocket. It receives configuration, runs the sing-box core, and reports stats/traffic back to the Panel. No database or web UI is needed.
+
+**Node Mode Quick Start:**
+
+```bash
+# On the Panel server (default mode)
+SUI_DB_FOLDER=db SUI_DEBUG=true ./sui
+
+# On the Node server
+SUI_MODE=node SUI_PANEL_URL="http://<panel-ip>:2095/app" SUI_NODE_TOKEN="<your-token>" ./sui
+```
+
 ### Environment Variables (development)
 
-| Variable       | Description                    | Example   |
-|----------------|--------------------------------|-----------|
-| `SUI_DB_FOLDER`| Directory for SQLite DB files  | `db`      |
-| `SUI_DEBUG`    | Enable debug mode              | `true`    |
-| `SUI_LOG_LEVEL`| Log level                      | `debug`   |
-| `SUI_BIN_FOLDER` | Directory for binaries       | `bin`     |
+| Variable         | Description                   | Example                       |
+|------------------|-------------------------------|-------------------------------|
+| `SUI_DB_FOLDER`  | Directory for SQLite DB files | `db`                          |
+| `SUI_DEBUG`      | Enable debug mode             | `true`                        |
+| `SUI_LOG_LEVEL`  | Log level                     | `debug`                       |
+| `SUI_BIN_FOLDER` | Directory for binaries        | `bin`                         |
+| `SUI_MODE`       | App mode: `"panel"` or `"node"`. Default: `"panel"` | `"panel"` |
+| `SUI_PANEL_URL`  | Panel URL for Node mode connection | `"http://127.0.0.1:2095/app"` |
+| `SUI_NODE_TOKEN` | Authentication token for Node mode | `"your-secret-token"`      |
 
 ### Docker (optional)
+
+#### Single Instance (Panel Mode)
 
 ```bash
 git clone https://github.com/alireza0/s-ui
@@ -111,6 +133,36 @@ git submodule update --init --recursive
 docker build -t s-ui .
 # or: docker compose up -d
 ```
+
+#### Panel + Node Separated Deployment
+
+**Panel Server:**
+
+```bash
+docker run -d \
+  --name s-ui-panel \
+  -p 2095:2095 \
+  -p 2096:2096 \
+  -v $(pwd)/db:/app/db \
+  -e SUI_MODE=panel \
+  --restart unless-stopped \
+  s-ui
+```
+
+**Node Server(s):**
+
+```bash
+docker run -d \
+  --name s-ui-node \
+  --network host \
+  -e SUI_MODE=node \
+  -e SUI_PANEL_URL="http://<panel-ip>:2095/app" \
+  -e SUI_NODE_TOKEN="<your-node-token>" \
+  --restart unless-stopped \
+  s-ui
+```
+
+> **Note**: Node mode requires access to the Panel's WebSocket endpoint. Ensure `SUI_PANEL_URL` points to the correct Panel address and `SUI_NODE_TOKEN` matches the token configured in the Panel.
 
 ---
 

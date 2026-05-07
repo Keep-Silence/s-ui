@@ -66,3 +66,37 @@ func GetDBFolderPath() string {
 func GetDBPath() string {
 	return fmt.Sprintf("%s/%s.db", GetDBFolderPath(), GetName())
 }
+
+const (
+	ModePanel = "panel"
+	ModeNode  = "node"
+)
+
+func GetAppMode() string {
+	mode := os.Getenv("SUI_MODE")
+	if mode == ModePanel || mode == ModeNode {
+		return mode
+	}
+	return ModePanel
+}
+
+func IsPanelMode() bool {
+	return GetAppMode() == ModePanel
+}
+
+func IsNodeMode() bool {
+	return GetAppMode() == ModeNode
+}
+
+func GetPanelUrl() string {
+	panelUrl := os.Getenv("SUI_PANEL_URL")
+	if panelUrl == "" {
+		return "http://127.0.0.1:2095/app"
+	}
+	return panelUrl
+}
+
+func GetNodeToken() string {
+	nodeToken := os.Getenv("SUI_NODE_TOKEN")
+	return nodeToken
+}

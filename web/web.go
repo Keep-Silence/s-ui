@@ -108,7 +108,10 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	apiv2 := api.NewAPIv2Handler(group_apiv2)
 
 	group_api := engine.Group(base_url + "api")
-	api.NewAPIHandler(group_api, apiv2)
+	apiv1 := api.NewAPIHandler(group_api, apiv2)
+
+	group_node_api := engine.Group(base_url + "node_api")
+	api.NewNodeAPIHandler(group_node_api, apiv1)
 
 	// Serve index.html as the entry point
 	// Handle all other routes by serving index.html

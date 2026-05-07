@@ -91,5 +91,8 @@ func (c *Core) Stop() error {
 }
 
 func (c *Core) IsRunning() bool {
+	if c == nil {
+		return false
+	}
 	return c.isRunning
 }

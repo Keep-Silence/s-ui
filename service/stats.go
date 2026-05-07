@@ -2,6 +2,7 @@ package service
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/alireza0/s-ui/database"
@@ -14,9 +15,23 @@ type onlines struct {
 	Inbound  []string `json:"inbound,omitempty"`
 	User     []string `json:"user,omitempty"`
 	Outbound []string `json:"outbound,omitempty"`
+	Node     []string `json:"node,omitempty"`
 }
 
-var onlineResources = &onlines{}
+type onlineTracker struct {
+	Inbound  map[string]int64
+	User     map[string]int64
+	Outbound map[string]int64
+	Node     map[string]int64
+	mu       sync.RWMutex
+}
+
+var onlineResources = &onlineTracker{
+	Inbound:  make(map[string]int64),
+	User:     make(map[string]int64),
+	Outbound: make(map[string]int64),
+	Node:     make(map[string]int64),
+}
 
 type StatsService struct {
 }
@@ -35,10 +50,10 @@ func (s *StatsService) SaveStats(enableTraffic bool) error {
 	}
 	stats := st.GetStats()
 
-	// Reset onlines
-	onlineResources.Inbound = nil
-	onlineResources.Outbound = nil
-	onlineResources.User = nil
+	// Update onlines with current local activity
+	now := time.Now().Unix()
+	onlineResources.mu.Lock()
+	defer onlineResources.mu.Unlock()
 
 	if len(*stats) == 0 {
 		return nil
@@ -71,11 +86,13 @@ func (s *StatsService) SaveStats(enableTraffic bool) error {
 		if stat.Direction {
 			switch stat.Resource {
 			case "inbound":
-				onlineResources.Inbound = append(onlineResources.Inbound, stat.Tag)
+				onlineResources.Inbound[stat.Tag] = now
 			case "outbound":
-				onlineResources.Outbound = append(onlineResources.Outbound, stat.Tag)
+				onlineResources.Outbound[stat.Tag] = now
 			case "user":
-				onlineResources.User = append(onlineResources.User, stat.Tag)
+				onlineResources.User[stat.Tag] = now
+			case "node":
+				onlineResources.Node[stat.Tag] = now
 			}
 		}
 	}
@@ -153,8 +170,34 @@ func (s *StatsService) downsampleStats(stats []model.Stats, maxRows int) []model
 }
 
 func (s *StatsService) GetOnlines() (onlines, error) {
-	return *onlineResources, nil
+	now := time.Now().Unix()
+	onlineResources.mu.Lock()
+	defer onlineResources.mu.Unlock()
+
+	res := onlines{}
+	ttl := int64(120) // 2 minutes
+
+	filter := func(m map[string]int64) []string {
+		var tags []string
+		for tag, lastSeen := range m {
+			if now-lastSeen < ttl {
+				tags = append(tags, tag)
+			} else {
+				delete(m, tag)
+			}
+		}
+		sort.Strings(tags)
+		return tags
+	}
+
+	res.Inbound = filter(onlineResources.Inbound)
+	res.Outbound = filter(onlineResources.Outbound)
+	res.User = filter(onlineResources.User)
+	res.Node = filter(onlineResources.Node)
+
+	return res, nil
 }
+
 func (s *StatsService) DelOldStats(days int) error {
 	oldTime := time.Now().AddDate(0, 0, -(days)).Unix()
 	db := database.GetDB()

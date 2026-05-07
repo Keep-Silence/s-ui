@@ -1,3 +1,6 @@
+ARG BUILDPLATFORM=linux/amd64
+ARG TARGETARCH=amd64
+
 FROM --platform=$BUILDPLATFORM node:alpine AS front-builder
 WORKDIR /app
 COPY frontend/ ./
@@ -25,10 +28,15 @@ RUN apk update && apk add --no-cache \
 ENV CC=gcc
 
 RUN CRONET_ARCH="$TARGETARCH" && \
-    CRONET_URL="https://github.com/SagerNet/cronet-go/releases/latest/download/libcronet-linux-${CRONET_ARCH}.so"; \
+    CRONET_URL="https://gh-proxy.org/https://github.com/SagerNet/cronet-go/releases/latest/download/libcronet-linux-${CRONET_ARCH}.so"; \
     echo "Downloading $CRONET_URL" && \
     wget -q -O ./libcronet.so "$CRONET_URL" && \
     chmod 755 ./libcronet.so
+
+COPY go.mod go.sum ./
+RUN go env -w GO111MODULE=on && \
+    go env -w GOPROXY=https://goproxy.cn,direct && \
+    go mod download
 
 COPY . .
 COPY --from=front-builder /app/dist/ /app/web/html/

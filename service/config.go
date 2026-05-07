@@ -22,6 +22,10 @@ var (
 	startCooldown       = 15 * time.Second
 )
 
+type NodePullService interface {
+	BroadcastPullConfig() error
+}
+
 type ConfigService struct {
 	ClientService
 	TlsService
@@ -30,6 +34,12 @@ type ConfigService struct {
 	OutboundService
 	ServicesService
 	EndpointService
+	NodeService
+	nodePullService NodePullService
+}
+
+func (c *ConfigService) SetNodePullService(n NodePullService) {
+	c.nodePullService = n
 }
 
 type SingBoxConfig struct {
@@ -194,10 +204,6 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 	defer func() {
 		if err == nil {
 			tx.Commit()
-			// Try to start core if it is not running
-			if !corePtr.IsRunning() {
-				s.StartCore()
-			}
 		} else {
 			tx.Rollback()
 		}
@@ -217,15 +223,25 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 	case "tls":
 		err = s.TlsService.Save(tx, act, data, hostname)
 		objs = append(objs, "clients", "inbounds")
+		if err == nil && s.nodePullService != nil {
+			logger.Debug("inbounds updated, broadcasting pull config")
+			err = s.nodePullService.BroadcastPullConfig()
+		}
 	case "inbounds":
 		err = s.InboundService.Save(tx, act, data, initUsers, hostname)
 		objs = append(objs, "clients")
+		if err == nil && s.nodePullService != nil {
+			logger.Debug("inbounds updated, broadcasting pull config")
+			err = s.nodePullService.BroadcastPullConfig()
+		}
 	case "outbounds":
 		err = s.OutboundService.Save(tx, act, data)
 	case "services":
 		err = s.ServicesService.Save(tx, act, data)
 	case "endpoints":
 		err = s.EndpointService.Save(tx, act, data)
+	case "nodes":
+		err = s.NodeService.Save(tx, act, data, hostname)
 	case "config":
 		err = s.SettingService.SaveConfig(tx, data)
 		if err != nil {

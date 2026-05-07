@@ -30,6 +30,28 @@
 | Subscription Link (link/json/clash + info)| :heavy_check_mark: |
 | Dark/Light Theme                       | :heavy_check_mark: |
 | API Interface                          | :heavy_check_mark: |
+| Panel / Node Distributed Architecture  | :heavy_check_mark: |
+
+## Architecture
+
+S-UI supports a distributed architecture with two operation modes:
+
+- **Panel Mode** (default): Runs the full web panel, SQLite database, subscription server, cron jobs, and the API. This is the control plane you access in your browser.
+- **Node Mode**: Runs as a lightweight client that connects to a Panel instance via WebSocket. It receives configuration from the Panel, runs the sing-box core locally, and reports stats/traffic back to the Panel. No database or web UI is required on the node.
+
+This allows you to deploy a central Panel and connect multiple Nodes (even across different regions) for distributed proxy management.
+
+### Quick Start (Panel + Node)
+
+**Panel Server:**
+```sh
+SUI_DB_FOLDER=db ./sui
+```
+
+**Node Server:**
+```sh
+SUI_MODE=node SUI_PANEL_URL="http://<panel-ip>:2095/app" SUI_NODE_TOKEN="<token>" ./sui
+```
 
 ## Supported Platforms
 | Platform | Architecture | Status |
@@ -134,15 +156,34 @@ docker compose up -d
 
 > Use docker
 
+### Panel + Node Separated Deployment
+
+Deploy a central **Panel** and one or more **Node** instances:
+
+**Panel Container:**
 ```shell
-mkdir s-ui && cd s-ui
 docker run -itd \
     -p 2095:2095 -p 2096:2096 -p 443:443 -p 80:80 \
     -v $PWD/db/:/app/db/ \
     -v $PWD/cert/:/root/cert/ \
-    --name s-ui --restart=unless-stopped \
+    -e SUI_MODE=panel \
+    --name s-ui-panel --restart=unless-stopped \
     alireza7/s-ui:latest
 ```
+
+**Node Container(s):**
+```shell
+docker run -itd \
+    --network host \
+    -e SUI_MODE=node \
+    -e SUI_PANEL_URL="http://<panel-ip>:2095/app" \
+    -e SUI_NODE_TOKEN="<your-node-token>" \
+    --name s-ui-node --restart=unless-stopped \
+    alireza7/s-ui:latest
+```
+
+> **Note:** Node mode requires the Panel's WebSocket endpoint to be reachable. Ensure `SUI_PANEL_URL` points to the correct Panel address and `SUI_NODE_TOKEN` matches the token configured in the Panel.
+
 
 > Build your own image
 
@@ -228,13 +269,16 @@ To run backend (from root folder of repository):
 
 ### Usage
 
-| Variable       |                      Type                      | Default       |
-| -------------- | :--------------------------------------------: | :------------ |
-| SUI_LOG_LEVEL  | `"debug"` \| `"info"` \| `"warn"` \| `"error"` | `"info"`      |
-| SUI_DEBUG      |                   `boolean`                    | `false`       |
-| SUI_BIN_FOLDER |                    `string`                    | `"bin"`       |
-| SUI_DB_FOLDER  |                    `string`                    | `"db"`        |
-| SINGBOX_API    |                    `string`                    | -             |
+| Variable       |                      Type                      | Description                                                        | Default                       |
+|----------------|:----------------------------------------------:|--------------------------------------------------------------------|:------------------------------|
+| SUI_LOG_LEVEL  | `"debug"` \| `"info"` \| `"warn"` \| `"error"` | Logging level                                                      | `"info"`                      |
+| SUI_DEBUG      |                   `boolean`                    | Enable debug mode                                                  | `false`                       |
+| SUI_BIN_FOLDER |                    `string`                    | Directory for binaries                                             | `"bin"`                       |
+| SUI_DB_FOLDER  |                    `string`                    | Directory for SQLite DB files                                      | `"db"`                        |
+| SUI_MODE       |             `"panel"` \| `"node"`              | App operation mode. `"panel"` = full panel; `"node"` = client only | `"panel"`                     |
+| SUI_PANEL_URL  |                    `string`                    | Panel URL for Node mode WebSocket connection                       | `"http://127.0.0.1:2095/app"` |
+| SUI_NODE_TOKEN |                    `string`                    | Authentication token used by Node to connect to Panel              | `""`                          |
+| SINGBOX_API    |                    `string`                    | sing-box API endpoint                                              | -                             |
 
 </details>
 

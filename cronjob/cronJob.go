@@ -3,6 +3,7 @@ package cronjob
 import (
 	"time"
 
+	"github.com/alireza0/s-ui/config"
 	"github.com/robfig/cron/v3"
 )
 
@@ -28,7 +29,9 @@ func (c *CronJob) Start(loc *time.Location, trafficAge int) error {
 			c.cron.AddJob("@daily", NewDelStatsJob(trafficAge))
 		}
 		// Start core if it is not running
-		c.cron.AddJob("@every 5s", NewCheckCoreJob())
+		if !config.IsPanelMode() {
+			c.cron.AddJob("@every 5s", NewCheckCoreJob())
+		}
 		// database WAL checkpoint
 		c.cron.AddJob("@every 10m", NewWALCheckpointJob())
 	}()

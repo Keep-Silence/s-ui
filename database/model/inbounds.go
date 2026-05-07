@@ -2,6 +2,8 @@ package model
 
 import (
 	"encoding/json"
+	"os"
+	"strings"
 )
 
 type Inbound struct {
@@ -13,6 +15,7 @@ type Inbound struct {
 	TlsId uint `json:"tls_id" form:"tls_id"`
 	Tls   *Tls `json:"tls" form:"tls" gorm:"foreignKey:TlsId;references:Id"`
 
+	Nodes   json.RawMessage `json:"nodes" form:"nodes"`
 	Addrs   json.RawMessage `json:"addrs" form:"addrs"`
 	OutJson json.RawMessage `json:"out_json" form:"out_json"`
 	Options json.RawMessage `json:"-" form:"-"`
@@ -43,6 +46,10 @@ func (i *Inbound) UnmarshalJSON(data []byte) error {
 	delete(raw, "tls")
 	delete(raw, "users")
 
+	// Nodes
+	i.Nodes, _ = json.MarshalIndent(raw["nodes"], "", "  ")
+	delete(raw, "nodes")
+
 	// Addrs
 	i.Addrs, _ = json.MarshalIndent(raw["addrs"], "", "  ")
 	delete(raw, "addrs")
@@ -62,9 +69,7 @@ func (i Inbound) MarshalJSON() ([]byte, error) {
 	combined := make(map[string]interface{})
 	combined["type"] = i.Type
 	combined["tag"] = i.Tag
-	if i.Tls != nil {
-		combined["tls"] = i.Tls.Server
-	}
+	i.marshalTls(combined)
 
 	if i.Options != nil {
 		var restFields map[string]json.RawMessage
@@ -86,6 +91,7 @@ func (i Inbound) MarshalFull() (*map[string]interface{}, error) {
 	combined["type"] = i.Type
 	combined["tag"] = i.Tag
 	combined["tls_id"] = i.TlsId
+	combined["nodes"] = i.Nodes
 	combined["addrs"] = i.Addrs
 	combined["out_json"] = i.OutJson
 
@@ -100,4 +106,29 @@ func (i Inbound) MarshalFull() (*map[string]interface{}, error) {
 		}
 	}
 	return &combined, nil
+}
+
+func (i Inbound) marshalTls(combined map[string]interface{}) {
+	if i.Tls != nil {
+		var server map[string]interface{}
+		if err := json.Unmarshal(i.Tls.Server, &server); err == nil {
+			if path, ok := server["certificate_path"].(string); ok && path != "" {
+				if content, err := os.ReadFile(path); err == nil {
+					sContent := strings.ReplaceAll(string(content), "\r\n", "\n")
+					server["certificate"] = strings.Split(strings.TrimSpace(sContent), "\n")
+					delete(server, "certificate_path")
+				}
+			}
+			if path, ok := server["key_path"].(string); ok && path != "" {
+				if content, err := os.ReadFile(path); err == nil {
+					sContent := strings.ReplaceAll(string(content), "\r\n", "\n")
+					server["key"] = strings.Split(strings.TrimSpace(sContent), "\n")
+					delete(server, "key_path")
+				}
+			}
+			combined["tls"] = server
+		} else {
+			combined["tls"] = i.Tls.Server
+		}
+	}
 }

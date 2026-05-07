@@ -8,6 +8,7 @@ import (
 	"github.com/alireza0/s-ui/cronjob"
 	"github.com/alireza0/s-ui/database"
 	"github.com/alireza0/s-ui/logger"
+	"github.com/alireza0/s-ui/node"
 	"github.com/alireza0/s-ui/service"
 	"github.com/alireza0/s-ui/sub"
 	"github.com/alireza0/s-ui/web"
@@ -23,6 +24,7 @@ type APP struct {
 	cronJob       *cronjob.CronJob
 	logger        *logging.Logger
 	core          *core.Core
+	nodeClient    *node.Client
 }
 
 func NewApp() *APP {
@@ -34,6 +36,11 @@ func (a *APP) Init() error {
 
 	a.initLog()
 
+	if config.IsNodeMode() {
+		a.nodeClient = node.NewClient()
+		return nil
+	}
+
 	err := database.InitDB(config.GetDBPath())
 	if err != nil {
 		return err
@@ -42,18 +49,19 @@ func (a *APP) Init() error {
 	// Init Setting
 	a.SettingService.GetAllSetting()
 
-	a.core = core.NewCore()
-
 	a.cronJob = cronjob.NewCronJob()
 	a.webServer = web.NewServer()
 	a.subServer = sub.NewServer()
-
-	a.configService = service.NewConfigService(a.core)
 
 	return nil
 }
 
 func (a *APP) Start() error {
+	if config.IsNodeMode() {
+		a.nodeClient.Start()
+		return nil
+	}
+
 	loc, err := a.SettingService.GetTimeLocation()
 	if err != nil {
 		return err
@@ -79,15 +87,14 @@ func (a *APP) Start() error {
 		return err
 	}
 
-	err = a.configService.StartCore()
-	if err != nil {
-		logger.Error(err)
-	}
-
 	return nil
 }
 
 func (a *APP) Stop() {
+	if config.IsNodeMode() {
+		a.nodeClient.Stop()
+		return
+	}
 	a.cronJob.Stop()
 	err := a.subServer.Stop()
 	if err != nil {
@@ -96,10 +103,6 @@ func (a *APP) Stop() {
 	err = a.webServer.Stop()
 	if err != nil {
 		logger.Warning("stop Web Server err:", err)
-	}
-	err = a.configService.StopCore()
-	if err != nil {
-		logger.Warning("stop Core err:", err)
 	}
 }
 

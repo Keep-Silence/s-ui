@@ -130,7 +130,7 @@ func prepareTls(t *model.Tls) map[string]interface{} {
 func socksLink(userConfig map[string]interface{}, addrs []map[string]interface{}) []string {
 	var links []string
 	for _, addr := range addrs {
-		links = append(links, fmt.Sprintf("socks5://%s:%s@%s:%d", userConfig["username"], userConfig["password"], addr["server"].(string), uint(addr["server_port"].(float64))))
+		links = append(links, fmt.Sprintf("socks://%s:%s@%s:%d#%s", userConfig["username"], userConfig["password"], addr["server"].(string), uint(addr["server_port"].(float64)), addr["remark"]))
 	}
 	return links
 }
@@ -142,7 +142,7 @@ func httpLink(userConfig map[string]interface{}, addrs []map[string]interface{})
 		if addr["tls"] != nil {
 			protocol = "https"
 		}
-		links = append(links, fmt.Sprintf("%s://%s:%s@%s:%d", protocol, userConfig["username"], userConfig["password"], addr["server"].(string), uint(addr["server_port"].(float64))))
+		links = append(links, fmt.Sprintf("%s://%s:%s@%s:%d#%s", protocol, userConfig["username"], userConfig["password"], addr["server"].(string), uint(addr["server_port"].(float64)), addr["remark"]))
 	}
 	return links
 }
@@ -184,7 +184,7 @@ func naiveLink(
 	password, _ := userConfig["password"].(string)
 	username, _ := userConfig["username"].(string)
 
-	baseUri := "http2://"
+	baseUri := "naive+https://"
 	var links []string
 
 	for _, addr := range addrs {
@@ -212,7 +212,7 @@ func naiveLink(
 		}
 
 		port, _ := addr["server_port"].(float64)
-		uri := baseUri + toBase64([]byte(fmt.Sprintf("%s:%s@%s:%.0f", username, password, addr["server"].(string), port)))
+		uri := baseUri + fmt.Sprintf("%s:%s@%s:%.0f", username, password, addr["server"].(string), port)
 		links = append(links, addParams(uri, params, addr["remark"].(string)))
 	}
 	return links

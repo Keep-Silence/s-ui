@@ -60,6 +60,13 @@ func (s *InboundService) GetAll() (*[]map[string]interface{}, error) {
 			"tag":    inbound.Tag,
 			"tls_id": inbound.TlsId,
 		}
+		if inbound.Nodes != nil {
+			var nodes []uint
+			if err := json.Unmarshal(inbound.Nodes, &nodes); err != nil {
+				return nil, err
+			}
+			inbData["nodes"] = nodes
+		}
 		if inbound.Options != nil {
 			var restFields map[string]json.RawMessage
 			if err := json.Unmarshal(inbound.Options, &restFields); err != nil {
