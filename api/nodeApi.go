@@ -157,9 +157,10 @@ func (a *NodeAPIHandler) handleWebSocket(ws *websocket.Conn, node model.Node) {
 			dataBytes, _ := json.Marshal(wsHandler.Data)
 			if err := json.Unmarshal(dataBytes, &stats); err == nil {
 				for i := range stats {
-					stats[i].Node = node.Name
-					if stats[i].Resource == "node" && stats[i].Tag == "__SELF__" {
-						stats[i].Tag = node.Name
+					stat := &stats[i]
+					stat.Node = node.Name
+					if stat.Resource == "node" && stat.Tag == "__SELF__" {
+						stat.Tag = node.Name
 					}
 				}
 				a.nodeService.SaveTraffic(stats)

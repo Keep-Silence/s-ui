@@ -224,7 +224,7 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 		err = s.TlsService.Save(tx, act, data, hostname)
 		objs = append(objs, "clients", "inbounds")
 		if err == nil && s.nodePullService != nil {
-			logger.Debug("inbounds updated, broadcasting pull config")
+			logger.Debug("tls updated, broadcasting pull config")
 			go s.nodePullService.BroadcastPullConfig()
 		}
 	case "inbounds":
