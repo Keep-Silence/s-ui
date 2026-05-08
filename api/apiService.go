@@ -47,13 +47,14 @@ func (a *ApiService) getData(c *gin.Context) (interface{}, error) {
 	}
 	onlines, err := a.StatsService.GetOnlines()
 
-	sysInfo := a.ServerService.GetSingboxInfo()
-	if sysInfo["running"] == false {
-		logs := a.ServerService.GetLogs("1", "debug")
-		if len(logs) > 0 {
-			data["lastLog"] = logs[0]
-		}
-	}
+	// TODO: Check if singbox is running
+	//sysInfo := a.ServerService.GetSingboxInfo()
+	//if sysInfo["running"] == false {
+	//	logs := a.ServerService.GetLogs("1", "debug")
+	//	if len(logs) > 0 {
+	//		data["lastLog"] = logs[0]
+	//	}
+	//}
 
 	if err != nil {
 		return "", err

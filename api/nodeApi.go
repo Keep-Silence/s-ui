@@ -210,7 +210,7 @@ func (a *NodeAPIHandler) getConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, singboxConfig)
 }
 
-func (cm *ConnectionManager) BroadcastPullConfig() error {
+func (cm *ConnectionManager) BroadcastPullConfig() {
 	connections := cm.GetAllConnections()
 
 	for ws, _ := range connections {
@@ -225,6 +225,4 @@ func (cm *ConnectionManager) BroadcastPullConfig() error {
 			continue
 		}
 	}
-
-	return nil
 }

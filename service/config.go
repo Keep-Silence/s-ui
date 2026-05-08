@@ -23,7 +23,7 @@ var (
 )
 
 type NodePullService interface {
-	BroadcastPullConfig() error
+	BroadcastPullConfig()
 }
 
 type ConfigService struct {
@@ -225,14 +225,14 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 		objs = append(objs, "clients", "inbounds")
 		if err == nil && s.nodePullService != nil {
 			logger.Debug("inbounds updated, broadcasting pull config")
-			err = s.nodePullService.BroadcastPullConfig()
+			go s.nodePullService.BroadcastPullConfig()
 		}
 	case "inbounds":
 		err = s.InboundService.Save(tx, act, data, initUsers, hostname)
 		objs = append(objs, "clients")
 		if err == nil && s.nodePullService != nil {
 			logger.Debug("inbounds updated, broadcasting pull config")
-			err = s.nodePullService.BroadcastPullConfig()
+			go s.nodePullService.BroadcastPullConfig()
 		}
 	case "outbounds":
 		err = s.OutboundService.Save(tx, act, data)
