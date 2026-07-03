@@ -251,9 +251,9 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 		if err != nil {
 			return nil, err
 		}
-		configData := make(json.RawMessage, len(data))
-		copy(configData, data)
-		go func() { _ = s.restartCoreWithConfig(configData) }()
+		//configData := make(json.RawMessage, len(data))
+		//copy(configData, data)
+		//go func() { _ = s.restartCoreWithConfig(configData) }()
 		if err == nil && s.nodePullService != nil {
 			logger.Debug("config updated, broadcasting pull config")
 			go s.nodePullService.BroadcastPullConfig()
