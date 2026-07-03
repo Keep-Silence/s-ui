@@ -236,6 +236,10 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 		}
 	case "outbounds":
 		err = s.OutboundService.Save(tx, act, data)
+		if err == nil && s.nodePullService != nil {
+			logger.Debug("outbounds updated, broadcasting pull config")
+			go s.nodePullService.BroadcastPullConfig()
+		}
 	case "services":
 		err = s.ServicesService.Save(tx, act, data)
 	case "endpoints":
@@ -250,6 +254,10 @@ func (s *ConfigService) Save(obj string, act string, data json.RawMessage, initU
 		configData := make(json.RawMessage, len(data))
 		copy(configData, data)
 		go func() { _ = s.restartCoreWithConfig(configData) }()
+		if err == nil && s.nodePullService != nil {
+			logger.Debug("config updated, broadcasting pull config")
+			go s.nodePullService.BroadcastPullConfig()
+		}
 	case "settings":
 		err = s.SettingService.Save(tx, data)
 	default:
